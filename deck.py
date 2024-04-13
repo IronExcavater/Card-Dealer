@@ -3,15 +3,15 @@ import random
 
 
 class Number(Enum):
-    TWO = 2
-    THREE = 3
-    FOUR = 4
-    FIVE = 5
-    SIX = 6
-    SEVEN = 7
-    EIGHT = 8
-    NINE = 9
-    TEN = 10
+    N2 = 2
+    N3 = 3
+    N4 = 4
+    N5 = 5
+    N6 = 6
+    N7 = 7
+    N8 = 8
+    N9 = 9
+    N10 = 10
     JACK = 'J'
     QUEEN = 'Q'
     KING = 'K'
@@ -22,10 +22,10 @@ class Number(Enum):
 
 
 class Suit(Enum):
-    SPADES = 'Spades'
-    CLUBS = 'Clubs'
-    HEARTS = 'Hearts'
-    DIAMONDS = 'Diamonds'
+    SPADES = '♠'
+    HEARTS = '♥'
+    DIAMONDS = '♦'
+    CLUBS = '♣'
 
     def __str__(self):
         return self.value
@@ -35,9 +35,49 @@ class Card:
     def __init__(self, number, suit):
         self.number = number
         self.suit = suit
+        if isinstance(self.number.value, int):
+            self.value = self.number.value
+        else:
+            match self.number:
+                case Number.JACK | Number.QUEEN | Number.KING:
+                    self.value = 10
+                case Number.ACE:
+                    self.value = 11
+        self.hidden = False
 
     def __str__(self):
-        return '{} {}'.format(self.suit, self.number)
+        if self.hidden:
+            return 'Hidden'
+        else:
+            return '{0} {1}'.format(self.suit.value, self.number.value)
+
+
+class Hand:
+    def __init__(self):
+        self.cards = []
+
+    def __str__(self):
+        return str(self.cards)
+
+    def sum(self):
+        hand_sum = 0
+        for card in self.cards:
+            hand_sum += card.value
+        if hand_sum > 21:
+            # Check for soft aces (value 11), changing their value to hard aces (1)
+            for card in self.cards:
+                if card.value == 11:
+                    card.value = 1
+                    hand_sum -= 10
+                    if hand_sum <= 21:
+                        break
+        return hand_sum
+
+    def can_split(self):
+        # A hand can be split when it only has two cards of the same number
+        if len(self.cards) == 2 and self.cards[0].number == self.cards[1].number:
+            return True
+        return False
 
 
 class Deck:
@@ -47,6 +87,7 @@ class Deck:
     def __str__(self):
         return str(self.cards)
 
-    def reset(self):
+    def shuffle(self):
+        # reset the cards in the deck and shuffle
         self.cards = [Card(number, suit) for number in Number for suit in Suit]
         random.shuffle(self.cards)
