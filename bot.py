@@ -1,5 +1,7 @@
+import asyncio
 import os
 import datetime
+import threading
 
 from dotenv import load_dotenv
 
@@ -24,6 +26,25 @@ for result in results:
 
 # initialise game list
 games = []
+
+
+def check_games(timer_event):
+    # Game has no active players, remove it from list
+    print('Checking activity in games...')
+    n = 0
+    for game in games:
+        if len(game.active) == 0:
+            n += 1
+            games.remove(game)
+    print('Removed {0} games, {1} active games left.'.format(n, len(games)))
+
+    # When timer_event is false, start thread timer for 5 minutes
+    if not timer_event.is_set():
+        threading.Timer(300, check_games, [timer_event]).start()
+
+
+timer_event = threading.Event()
+check_games(timer_event)
 
 
 @bot.event
@@ -62,7 +83,7 @@ async def reward(ctx):
                 now = datetime.datetime.now()
                 if now - datetime.timedelta(minutes=30) >= last_reward:
                     await ctx.send('You\'ve redeemed your $200 reward, 30 minutes until next reward!')
-                    player.deposit(200)
+                    player.change_balance(200)
                     update = '''
                     UPDATE players
                     SET last_reward = NOW()
@@ -82,8 +103,8 @@ async def blackjack(ctx):
                 await ctx.send('You are currently playing blackjack!\nLeave previous game to continue.')
                 return
 
-    # Check if channel is already hosting blackjack
     for game in games:
+        # Else check if channel is already hosting blackjack
         if game.channel == ctx.channel:
             await ctx.send('{0} has joined the table and queued for next round.'.format(ctx.guild.get_member(ctx.author.id).display_name))
             for player in players:
@@ -102,6 +123,12 @@ async def blackjack(ctx):
     for player in players:
         if player.id == ctx.author.id:
             games[len(games) - 1].queue.append(player)
+
+    # User doesn't exist in player database, create new Player and record
+    players.append(Player(ctx.author.id, ctx.author.name, ctx.guild.get_member(ctx.author.id).display_name))
+    players[len(players) - 1].create_record()
+    games[len(games) - 1].queue.append(players[len(players) - 1])
+    await asyncio.sleep(7)
     await games[len(games) - 1].start()
 
 
@@ -116,11 +143,12 @@ async def bet(ctx, amount: int):
                         if amount < 10:
                             await ctx.send('Bet must be more than $10')
                             return
-                        if player.bet > amount:
-                            await ctx.send('You have already bet ${1}.'.format(player.user_name, amount))
+                        if player.hands[0].bet > amount:
+                            await ctx.send('You have already bet ${0}.'.format(amount))
                         else:
-                            player.bet = amount
-                            await ctx.send('{0} is betting ${1}.'.format(player.user_name, amount))
+                            player.hands[0].bet = amount
+                            await ctx.send('{0} is betting ${1}.'.format(player.display_name, amount))
+                            await game.all_bets()
                     else:
                         await ctx.send('Betting period has already ended!')
                     return
@@ -132,7 +160,7 @@ async def hit(ctx):
     for game in games:
         if game.channel == ctx.channel and game.status == Status.ACTION:
             if game.active[game.current_player].id == ctx.author.id:
-                game.hit(game.active[game.current_player])
+                await game.hit(game.active[game.current_player])
 
 
 @bot.command()
@@ -141,7 +169,16 @@ async def split(ctx):
     for game in games:
         if game.channel == ctx.channel and game.status == Status.ACTION:
             if game.active[game.current_player].id == ctx.author.id:
-                game.split(game.active[game.current_player])
+                await game.split(game.active[game.current_player])
+
+
+@bot.command()
+async def insurance(ctx, amount: int):
+    # Check if player message in correct channel and is current action player
+    for game in games:
+        if game.channel == ctx.channel and game.status == Status.ACTION:
+            if game.active[game.current_player].id == ctx.author.id:
+                await game.insurance(game.active[game.current_player], amount)
 
 
 @bot.command()
@@ -150,7 +187,16 @@ async def stay(ctx):
     for game in games:
         if game.channel == ctx.channel and game.status == Status.ACTION:
             if game.active[game.current_player].id == ctx.author.id:
-                game.stand(game.active[game.current_player])
+                await game.stand(game.active[game.current_player])
+
+
+@bot.command()
+async def surrender(ctx):
+    # Check if player message in correct channel and is current action player
+    for game in games:
+        if game.channel == ctx.channel and game.status == Status.ACTION:
+            if game.active[game.current_player].id == ctx.author.id:
+                await game.surrender(game.active[game.current_player])
 
 
 @bot.command()

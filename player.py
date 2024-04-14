@@ -1,12 +1,4 @@
 import sql
-from enum import Enum
-
-from deck import Hand
-
-
-class Action(Enum):
-    REPEAT = 1
-    BREAK = 2
 
 
 class Player:
@@ -15,15 +7,11 @@ class Player:
         self.user_name = user_name
         self.display_name = display_name
         self.balance = balance
-        self.action = Action.REPEAT
-        self.bet = 0
-        self.hands = [Hand()]
+        self.inactivity = 0
+        self.insurance_bet = 0
+        self.hands = []
 
-    def withdraw(self, amount: int):
-        self.balance -= amount
-        Player.update_record(self)
-
-    def deposit(self, amount: int):
+    def change_balance(self, amount: int):
         self.balance += amount
         Player.update_record(self)
 
