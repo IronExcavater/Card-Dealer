@@ -47,19 +47,23 @@ class Card:
 
     def __str__(self):
         if self.hidden:
-            return 'Hidden'
+            return '░░'
         else:
             return '{0} {1}'.format(self.suit.value, self.number.value)
 
 
 class Hand:
-    def __init__(self):
+    def __init__(self, bet: int):
         self.cards = []
+        self.bet = bet
 
     def __str__(self):
-        return str(self.cards)
+        string = '  '
+        for card in self.cards:
+            string += str(card) + '     '
+        return string
 
-    def sum(self):
+    def sum(self) -> int:
         hand_sum = 0
         for card in self.cards:
             hand_sum += card.value
@@ -73,7 +77,7 @@ class Hand:
                         break
         return hand_sum
 
-    def can_split(self):
+    def can_split(self) -> bool:
         # A hand can be split when it only has two cards of the same number
         if len(self.cards) == 2 and self.cards[0].number == self.cards[1].number:
             return True
@@ -87,7 +91,15 @@ class Deck:
     def __str__(self):
         return str(self.cards)
 
-    def shuffle(self):
+    def remove_card(self):
+        self.cards.pop(0)
+        # if deck has less than 14, add new deck of cards
+        if len(self.cards) < 14:
+            cards = [Card(number, suit) for number in Number for suit in Suit]
+            random.shuffle(cards)
+            self.cards.extend(cards)
+
+    def reset_deck(self):
         # reset the cards in the deck and shuffle
         self.cards = [Card(number, suit) for number in Number for suit in Suit]
         random.shuffle(self.cards)
