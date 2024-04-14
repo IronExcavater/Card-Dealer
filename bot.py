@@ -48,6 +48,25 @@ timer_event = threading.Event()
 check_games(timer_event)
 
 
+def check_games(timer_event):
+    # Game has no active players, remove it from list
+    print('Checking activity in games...')
+    n = 0
+    for game in games:
+        if len(game.active) == 0:
+            n += 1
+            games.remove(game)
+    print('Removed {0} games, {1} active games left.'.format(n, len(games)))
+
+    # When timer_event is false, start thread timer for 5 minutes
+    if not timer_event.is_set():
+        threading.Timer(300, check_games, [timer_event]).start()
+
+
+timer_event = threading.Event()
+check_games(timer_event)
+
+
 @bot.event
 async def on_ready():
     print('Logged in as {0.user}'.format(bot))
