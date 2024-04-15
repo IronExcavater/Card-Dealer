@@ -56,6 +56,7 @@ class Hand:
     def __init__(self, bet: int):
         self.cards = []
         self.bet = bet
+        self.doubled = False
 
     def __str__(self):
         string = '  '
@@ -95,9 +96,8 @@ class Deck:
         self.cards.pop(0)
         # if deck has less than 14, add new deck of cards
         if len(self.cards) < 14:
-            cards = [Card(number, suit) for number in Number for suit in Suit]
-            random.shuffle(cards)
-            self.cards.extend(cards)
+            self.cards.extend([Card(number, suit) for number in Number for suit in Suit])
+            random.shuffle(self.cards)
 
     def reset_deck(self):
         # reset the cards in the deck and shuffle
